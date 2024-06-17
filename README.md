@@ -19,7 +19,7 @@ DB_HOST=
 DB_PORT=
 
 SECRET_KEY=
-IP=
+IP= 
 DOMAIN=
 
 ```
