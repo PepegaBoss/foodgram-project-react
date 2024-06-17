@@ -105,24 +105,24 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/foodgram_infra:latest
     
-  deploy:
+deploy:
     runs-on: ubuntu-latest
     needs:
       - build_and_push_to_docker_hub_backend
       - build_and_push_to_docker_hub_frontend
-      - build_and_push_to_docker_hub_gateway
+      - build_and_push_to_docker_hub_infra
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-      - name: Copy docker-compose.yml via ssh
+      - name: Copy project files via ssh
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "docker-compose.production.yml"
-          target: "foodgram"
+          source: "."
+          target: "/home/yc-user/foodgram-project-react"
       - name: Executing remote ssh commands to deploy
         uses: appleboy/ssh-action@master
         with:
@@ -130,10 +130,11 @@ jobs:
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-            script: |
-              cd /home/yc-user/foodgram-project-react
-              sudo docker compose -f docker-compose.production.yml pull
-              sudo docker compose -f docker-compose.production.yml down
-              sudo docker compose -f docker-compose.production.yml up -d
-              sudo docker compose -f docker-compose.production.yml exec -T backend python manage.py migrate
-              sudo docker compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --no-input
+          script: |
+            cd /home/yc-user/foodgram-project-react
+            # Выполняет pull образов с Docker Hub
+            sudo docker compose -f docker-compose.production.yml pull
+            sudo docker compose -f docker-compose.production.yml down
+            sudo docker compose -f docker-compose.production.yml up -d
+            sudo docker compose -f docker-compose.production.yml exec -T backend python manage.py migrate
+            sudo docker compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --no-input
