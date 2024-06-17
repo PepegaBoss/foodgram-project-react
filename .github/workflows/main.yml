@@ -119,8 +119,7 @@ jobs:
           with:
             host: ${{ secrets.HOST }}
             username: ${{ secrets.USER }}
-            key: ${{ secrets.SSH_PRIVATE_KEY }}
-            passphrase: ${{ secrets.SSH_PASSPHRASE }}
+            password: ${{ secrets.SSH_PASSWORD }}
             source: "."
             target: "/home/yc-user/foodgram-project-react"
         - name: Executing remote ssh commands to deploy
@@ -128,8 +127,7 @@ jobs:
           with:
             host: ${{ secrets.HOST }}
             username: ${{ secrets.USER }}
-            key: ${{ secrets.SSH_PRIVATE_KEY }}
-            passphrase: ${{ secrets.SSH_PASSPHRASE }}
+            password: ${{ secrets.SSH_PASSWORD }}
             script: |
               cd /home/yc-user/foodgram-project-react  # Переходим в директорию проекта на сервере
               # Выполняет pull образов с Docker Hub
