@@ -45,7 +45,7 @@ sudo docker compose -f docker-compose.production.yml exec backend python manage.
 ```
 
 Данные суперпользователя для проверки проекта
-
+Сервер доступен по адресу https://foodgramio.zapto.org/
 
 ```
 
