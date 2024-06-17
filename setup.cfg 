@@ -7,7 +7,9 @@ exclude =
     */migrations/,
     venv/,
     */venv/,
-    env/
-    */env/,
+    env/,
+    */env/
 per-file-ignores =
     */settings.py:E501
+
+max-line-length = 120
