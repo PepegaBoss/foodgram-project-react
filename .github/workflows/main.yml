@@ -122,7 +122,7 @@ jobs:
             key: ${{ secrets.SSH_PRIVATE_KEY }}
             passphrase: ${{ secrets.SSH_PASSPHRASE }}
             source: "."
-            target: "/home/yc-user/foodgram-project-react"
+            target: "/home/yc-user/foodgram-project-react/infra"
         - name: Executing remote ssh commands to deploy
           uses: appleboy/ssh-action@master
           with:
@@ -131,8 +131,7 @@ jobs:
             key: ${{ secrets.SSH_PRIVATE_KEY }}
             passphrase: ${{ secrets.SSH_PASSPHRASE }}
             script: |
-              cd /home/yc-user/foodgram-project-react
-              # Выполняет pull образов с Docker Hub
+              cd /home/yc-user/foodgram-project-react/infra
               sudo docker compose -f docker-compose.production.yml pull
               sudo docker compose -f docker-compose.production.yml down
               sudo docker compose -f docker-compose.production.yml up -d
