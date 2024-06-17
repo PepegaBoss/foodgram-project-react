@@ -30,6 +30,7 @@ services:
     env_file: .env
     command: cp -r /app/build/. /static/
     volumes:
+      - ../frontend/:/app/result_build/
       - static:/static
     networks:
       - infra_network
