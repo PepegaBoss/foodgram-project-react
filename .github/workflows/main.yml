@@ -106,30 +106,32 @@ jobs:
           tags: ${{ secrets.DOCKER_USERNAME }}/foodgram_infra:latest
     
   deploy:
-      runs-on: ubuntu-latest
-      needs:
-        - build_and_push_to_docker_hub_backend
-        - build_and_push_to_docker_hub_frontend
-        - build_and_push_to_docker_hub_infra
-      steps:
-        - name: Checkout repo
-          uses: actions/checkout@v3
-        - name: Copy project files via ssh
-          uses: appleboy/scp-action@master
-          with:
-            host: ${{ secrets.HOST }}
-            username: ${{ secrets.USER }}
-            password: ${{ secrets.SSH_PASSWORD }}
-            source: "."
-            target: "/home/yc-user/foodgram-project-react"
-        - name: Executing remote ssh commands to deploy
-          uses: appleboy/ssh-action@master
-          with:
-            host: ${{ secrets.HOST }}
-            username: ${{ secrets.USER }}
-            password: ${{ secrets.SSH_PASSWORD }}
+    runs-on: ubuntu-latest
+    needs:
+      - build_and_push_to_docker_hub_backend
+      - build_and_push_to_docker_hub_frontend
+      - build_and_push_to_docker_hub_gateway
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Copy docker-compose.yml via ssh
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "docker-compose.production.yml"
+          target: "foodgram"
+      - name: Executing remote ssh commands to deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
             script: |
-              cd /home/yc-user/foodgram-project-react 
+              cd /home/yc-user/foodgram-project-react
               sudo docker compose -f docker-compose.production.yml pull
               sudo docker compose -f docker-compose.production.yml down
               sudo docker compose -f docker-compose.production.yml up -d
