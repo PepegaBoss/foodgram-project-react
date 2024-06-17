@@ -5,10 +5,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.db import IntegrityError
+from recipes.models import Favorite, Follow, Ingredient, Recipe, RecipeIngredient, ShoppingCart, Tag
 from rest_framework import serializers
-
-from recipes.models import (Favorite, Follow, Ingredient, Recipe,
-                            RecipeIngredient, ShoppingCart, Tag)
 
 User = get_user_model()
 

@@ -1,23 +1,26 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from recipes.models import Favorite, Follow, Ingredient, Recipe, ShoppingCart, Tag
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import (AllowAny, IsAuthenticated,
-                                        IsAuthenticatedOrReadOnly)
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from recipes.models import (Favorite, Follow, Ingredient, Recipe, ShoppingCart,
-                            Tag)
-
 from .filters import IngredientFilter, RecipeFilter
 from .permissions import IsOwnerOrReadOnly
-from .serializers import (FavoriteSerializer, FollowSerializer,
-                          IngredientSerializer, RecipeCreateSerializer,
-                          RecipeSerializer, SelfUserSerializer,
-                          ShoppingCartSerializer, TagSerializer,
-                          UserSerializer)
+from .serializers import (
+    FavoriteSerializer,
+    FollowSerializer,
+    IngredientSerializer,
+    RecipeCreateSerializer,
+    RecipeSerializer,
+    SelfUserSerializer,
+    ShoppingCartSerializer,
+    TagSerializer,
+    UserSerializer,
+)
 
 User = get_user_model()
 

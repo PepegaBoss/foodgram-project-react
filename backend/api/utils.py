@@ -1,10 +1,9 @@
 from django.db.models import Sum
 from django.http import HttpResponse
+from recipes.models import RecipeIngredient, ShoppingCart
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
-
-from recipes.models import RecipeIngredient, ShoppingCart
 
 
 class DownloadViewSet(APIView):

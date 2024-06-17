@@ -2,9 +2,16 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .utils import DownloadViewSet
-from .views import (FavoriteViewSet, FollowListViewSet, FollowViewSet,
-                    IngredientViewSet, RecipeViewSet, ShoppingCartViewSet,
-                    TagsViewSet, UserMe)
+from .views import (
+    FavoriteViewSet,
+    FollowListViewSet,
+    FollowViewSet,
+    IngredientViewSet,
+    RecipeViewSet,
+    ShoppingCartViewSet,
+    TagsViewSet,
+    UserMe,
+)
 
 router = DefaultRouter()
 router.register('tags',
