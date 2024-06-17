@@ -129,8 +129,7 @@ jobs:
             username: ${{ secrets.USER }}
             password: ${{ secrets.SSH_PASSWORD }}
             script: |
-              cd /home/yc-user/foodgram-project-react  # Переходим в директорию проекта на сервере
-              # Выполняет pull образов с Docker Hub
+              cd /home/yc-user/foodgram-project-react 
               sudo docker compose -f docker-compose.production.yml pull
               sudo docker compose -f docker-compose.production.yml down
               sudo docker compose -f docker-compose.production.yml up -d
