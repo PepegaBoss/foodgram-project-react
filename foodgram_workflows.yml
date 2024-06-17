@@ -105,7 +105,7 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/foodgram_infra:latest
     
-  deploy:
+deploy:
     runs-on: ubuntu-latest
     needs:
       - build_and_push_to_docker_hub_backend
@@ -121,10 +121,7 @@ jobs:
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: |
-            backend/
-            frontend/
-            docker-compose.production.yml
+          source: "."
           target: "/home/yc-user/foodgram-project-react"
       - name: Executing remote ssh commands to deploy
         uses: appleboy/ssh-action@master
