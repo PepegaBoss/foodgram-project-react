@@ -1,0 +1,52 @@
+version: '3'
+
+volumes:
+  pg_data:
+  static:
+  media:
+
+services:
+  db:
+    image: postgres:13
+    env_file: .env
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - infra_network
+
+  backend:
+    image: pepegaboss/foodgram_backend
+    env_file: .env
+    volumes:
+      - static:/static/
+      - media:/app/media
+    depends_on:
+      - db
+    networks:
+      - infra_network
+
+  frontend:
+    image: pepegaboss/foodgram_frontend
+    env_file: .env
+    command: cp -r /app/build/. /static/
+    volumes:
+      - static:/static
+    networks:
+      - infra_network
+
+  infra:
+    image: pepegaboss/foodgram_infra
+    env_file: .env
+    depends_on:
+      - backend
+    volumes:
+      - ../frontend/build:/usr/share/nginx/html/
+      - static:/static/
+      - media:/app/media
+    ports:
+      - 8000:80
+    networks:
+      - infra_network
+
+networks:
+  infra_network:
