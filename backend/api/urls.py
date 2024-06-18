@@ -2,18 +2,12 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .utils import DownloadViewSet
-from .views import (
-    FavoriteViewSet,
-    FollowListViewSet,
-    FollowViewSet,
-    IngredientViewSet,
-    RecipeViewSet,
-    ShoppingCartViewSet,
-    TagsViewSet,
-    UserMe,
-)
+from .views import (FavoriteViewSet, FollowListViewSet, FollowViewSet,
+                    IngredientViewSet, RecipeViewSet, ShoppingCartViewSet,
+                    TagsViewSet, UsersViewSet)
 
 router = DefaultRouter()
+router.register(r'users', UsersViewSet, basename='users')
 router.register('tags',
                 TagsViewSet,
                 basename='tags')
@@ -43,7 +37,6 @@ router.register('ingredients',
                 basename='Ingredient')
 
 urlpatterns = [
-    path('users/me/', UserMe.as_view()),
     path('auth/', include('djoser.urls.authtoken')),
 
     path('recipes/download_shopping_cart/',

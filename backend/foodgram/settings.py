@@ -1,6 +1,8 @@
 import os
+
 from pathlib import Path
 
+from django.core.management.utils import get_random_secret_key
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -8,19 +10,16 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+IP = os.getenv('IP', '')
+DOMAIN = os.getenv('DOMAIN', '')
+LOCAL_IP = os.getenv('LOCAL_IP', '')
 
-SECRET_KEY = os.getenv('SECRET_KEY', 'default')
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', get_random_secret_key())
 
+DEBUG = os.getenv('DEBUG', "False") == "True"
 
-DEBUG = True
-
-ALLOWED_HOSTS = ['127.0.0.1',
-                 '0.0.0.0',
-                 'localhost',
-                 'backend',
-                 os.getenv('IP'),
-                 os.getenv('DOMAIN')]
-
+ALLOWED_HOSTS = [IP, DOMAIN, LOCAL_IP]
+ALLOWED_HOSTS = list(filter(None, ALLOWED_HOSTS))
 
 IP = os.getenv('IP')
 DOMAIN = os.getenv('DOMAIN')
@@ -29,10 +28,10 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1',
     'http://localhost',
     'http://backend',
-    'http://{0}'.format(IP),
-    'http://{0}'.format(DOMAIN),
-    'https://{0}'.format(IP),
-    'https://{0}'.format(DOMAIN),
+    'http://{0}'.format(ALLOWED_HOSTS),
+    'http://{0}'.format(ALLOWED_HOSTS),
+    'https://{0}'.format(ALLOWED_HOSTS),
+    'https://{0}'.format(ALLOWED_HOSTS),
 ]
 
 
@@ -48,6 +47,7 @@ INSTALLED_APPS = [
     'djoser',
     'corsheaders',
     'rest_framework_simplejwt',
+    'colorfield',
     'django_filters',
     'api.apps.ApiConfig',
     'users.apps.UsersConfig',
@@ -113,7 +113,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-AUTH_USER_MODEL = 'users.CustomUser'
+AUTH_USER_MODEL = 'users.User'
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
@@ -137,7 +137,8 @@ DJOSER = {
     'SERIALIZERS': {
         'user': 'api.serializers.UserSerializer',
         'user_list': 'api.serializers.UserSerializer',
-        'user_create': 'api.serializers.UserCreateSerializer', },
+        'user_create': 'api.serializers.UserSignUpSerializer'
+        },
     'LOGIN_FIELD': 'email',
     'PERMISSIONS': {
         'user': ['api.permissions.IsOwnerOrReadOnly'],
@@ -163,14 +164,8 @@ CORS_URLS_REGEX = r'^/api/.*$'
 
 CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1',
-    'http://{0}'.format(IP),
-    'http://{0}'.format(DOMAIN),
-    'https://{0}'.format(IP),
-    'https://{0}'.format(DOMAIN),
+    'http://{0}'.format(ALLOWED_HOSTS),
+    'http://{0}'.format(ALLOWED_HOSTS),
+    'https://{0}'.format(ALLOWED_HOSTS),
+    'https://{0}'.format(ALLOWED_HOSTS),
 ]
-
-USERNAME_MAX_LENGTH = 150
-MAX_EMAIL_LEN = 254
-TAG_MAX_LEN = 200
-USERNAME_FORMAT = r'^[\w.@+-]+$'
-TAG_SLUG_PATTERN = r'^[-a-zA-Z0-9_]'

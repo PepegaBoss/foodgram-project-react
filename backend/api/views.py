@@ -1,63 +1,40 @@
 from django.contrib.auth import get_user_model
+from django.db.models import Sum
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from recipes.models import (Favorite, Follow,
-                            Ingredient, Recipe,
-                            ShoppingCart, Tag)
+from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import (AllowAny,
-                                        IsAuthenticated,
+from rest_framework.permissions import (AllowAny, IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
-from rest_framework.views import APIView
+
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, Tag)
+from users.models import Follow
 
 from .filters import IngredientFilter, RecipeFilter
 from .permissions import IsOwnerOrReadOnly
-from .serializers import (
-    FavoriteSerializer,
-    FollowSerializer,
-    IngredientSerializer,
-    RecipeCreateSerializer,
-    RecipeSerializer,
-    SelfUserSerializer,
-    ShoppingCartSerializer,
-    TagSerializer,
-    UserSerializer,
-)
+from .serializers import (FavoriteSerializer, FollowSerializer,
+                          IngredientSerializer, RecipeCreateSerializer,
+                          RecipeSerializer, ShoppingCartSerializer,
+                          TagSerializer, UserSerializer)
 
 User = get_user_model()
 
 
-class UsersViewSet(mixins.UpdateModelMixin,
-                   mixins.DestroyModelMixin,
-                   mixins.CreateModelMixin,
-                   mixins.ListModelMixin,
-                   mixins.RetrieveModelMixin,
-                   viewsets.GenericViewSet):
+class UsersViewSet(DjoserUserViewSet):
     """Вьюсет для просмотра и редактирования данных пользователей."""
-
-    queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = (AllowAny, )
-    http_method_names = ['get', 'post']
+    queryset = DjoserUserViewSet.queryset
 
-
-class UserMe(APIView):
-    """Вьюсет для своей страницы."""
-
-    permission_classes = (IsAuthenticated,)
-
-    def get(self, request):
-        serializer = SelfUserSerializer(request.user)
-        return Response(serializer.data)
-
-    def patch(self, request):
-        user = request.user
-        serializer = SelfUserSerializer(user, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return self.get(request)
+    def get_permissions(self):
+        if self.action == 'me':
+            permission_classes = [IsAuthenticated]
+        else:
+            permission_classes = [AllowAny]
+        return [permission() for permission in permission_classes]
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -80,8 +57,41 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-    def perform_update(self, serializer):
-        serializer.save(author=self.request.user)
+    def _delete_object(self, request, model, object_id):
+        obj = get_object_or_404(model, pk=object_id)
+        if not self.request.user == obj.user:
+            return Response(
+                "У вас нет прав для выполнения этого действия.",
+                status=status.HTTP_403_FORBIDDEN)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # Сделал так но че то сайт перестал работать, если удаляю из утилс
+    # urls пробовал менять не помогло
+    @action(detail=False, methods=['get'],
+            permission_classes=[IsAuthenticated])
+    def generate_shopping_cart_file(self, request):
+        shopping_cart = ShoppingCart.objects.filter(
+            user=self.request.user).values('recipe')
+        items = RecipeIngredient.objects.filter(
+            recipe__in=shopping_cart).values(
+            'ingredient__name',
+            'ingredient__measurement_unit'
+        ).annotate(
+            total_amount=Sum('amount')
+        ).order_by('ingredient__name')
+
+        text = ['Список покупок' + '\n' + '\n']
+        for item in items:
+            text.append(f"- {item['ingredient__name']} "
+                        f"({item['ingredient__measurement_unit']}): "
+                        f"{item['total_amount']}\n")
+        response = HttpResponse(
+            content_type='text/plain', status=status.HTTP_200_OK)
+        response['Content-Disposition'] = ('attachment; '
+                                           'filename=shopping_cart.txt')
+        response.writelines(text)
+        return response
 
 
 class TagsViewSet(viewsets.ModelViewSet):
@@ -116,13 +126,10 @@ class BaseViewset(viewsets.ModelViewSet):
             permission_classes=[IsAuthenticated])
     def delete(self, request, *args, **kwargs):
         recipe = self._get_title(self.title_model)
-        model_items = self.model.objects.filter(recipe=recipe,
-                                                user=self.request.user)
-        if model_items.exists():
-            model_items.first().delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response('Объект не существует.',
-                        status=status.HTTP_400_BAD_REQUEST)
+        model_item = get_object_or_404(
+            self.model, recipe=recipe, user=self.request.user)
+        model_item.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ShoppingCartViewSet(BaseViewset):
