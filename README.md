@@ -19,9 +19,13 @@ POSTGRES_DB=
 DB_HOST=
 DB_PORT=
 
+DEBUG=True
+
 SECRET_KEY= 
 IP= 
 DOMAIN=
+LOCAL_IP=
+
 
 ```
 
