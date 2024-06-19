@@ -1,5 +1,4 @@
 import django_filters
-
 from django_filters.rest_framework import BooleanFilter
 
 from recipes.models import Ingredient, Recipe
@@ -39,13 +38,11 @@ class RecipeFilter(django_filters.FilterSet):
         fields = ('tags', 'is_in_shopping_cart', 'is_favorited', 'author')
 
     def filter_is_in_shopping_cart(self, queryset, name, value):
-        if self.request.user.is_authenticated:
-            if value:
-                return queryset.filter(shopping_cart__user=self.request.user)
-            return queryset
+        if self.request.user.is_authenticated and value:
+            return queryset.filter(shopping_cart__user=self.request.user)
         return queryset
 
     def filter_is_favorited(self, queryset, name, value):
-        if not self.request.user.is_authenticated:
-            return queryset
-        return queryset.filter(favorite__user=self.request.user)
+        if self.request.user.is_authenticated and value:
+            return queryset.filter(favorite__user=self.request.user)
+        return queryset

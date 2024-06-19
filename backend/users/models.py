@@ -2,9 +2,10 @@ from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import F, Q
 
-from api.constants import (EMAIL_MAX_LENGTH, PASSWORD_MAX_LENGTH,
-                           USERNAME_MAX_LENGTH)
+from recipes.constants import (EMAIL_MAX_LENGTH, PASSWORD_MAX_LENGTH,
+                               USERNAME_MAX_LENGTH)
 
 
 class User(AbstractUser):
@@ -15,7 +16,6 @@ class User(AbstractUser):
         'username',
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
-        validators=[username_validator]
     )
     first_name = models.CharField(
         'Имя',
@@ -38,10 +38,10 @@ class User(AbstractUser):
     )
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
+    REQUIRED_FIELDS = ('username', 'first_name', 'last_name')
 
     class Meta:
-        ordering = ['email']
+        ordering = ('email',)
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
 
@@ -66,17 +66,19 @@ class Follow(models.Model):
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
         constraints = [
-            models.UniqueConstraint(fields=[
-                'follower', 'author'], name='unique_followers')
+            models.UniqueConstraint(
+                fields=('follower', 'author'),
+                name='unique_followers'
+            ),
+            models.CheckConstraint(
+                check=~Q(follower=F('author')),
+                name='prevent_self_follow'
+            )
         ]
 
     def clean(self):
         if self.follower == self.author:
             raise ValidationError("Нельзя подписаться на самого себя.")
-
-    def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f'{self.follower} подписан на {self.author}'

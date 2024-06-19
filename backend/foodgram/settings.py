@@ -10,27 +10,19 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-IP = os.getenv('IP', '')
-DOMAIN = os.getenv('DOMAIN', '')
-LOCAL_IP = os.getenv('LOCAL_IP', '')
+HOSTS = os.getenv('HOSTS').split(',')
+
 
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', get_random_secret_key())
 
 DEBUG = os.getenv('DEBUG', "False") == "True"
 
-ALLOWED_HOSTS = [IP, DOMAIN, LOCAL_IP]
-ALLOWED_HOSTS = list(filter(None, ALLOWED_HOSTS))
+ALLOWED_HOSTS = list(filter(None, HOSTS))
 
-IP = os.getenv('IP')
-DOMAIN = os.getenv('DOMAIN')
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://127.0.0.1',
-    'http://localhost',
     'http://backend',
     'http://{0}'.format(ALLOWED_HOSTS),
-    'http://{0}'.format(ALLOWED_HOSTS),
-    'https://{0}'.format(ALLOWED_HOSTS),
     'https://{0}'.format(ALLOWED_HOSTS),
 ]
 
@@ -124,7 +116,7 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ],
     'DEFAULT_PAGINATION_CLASS': 'api.pagination.PageLimitPagination',
-    'PAGE_SIZE': 6,
+    'PAGE_SIZE': 10,
 }
 
 
@@ -136,8 +128,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DJOSER = {
     'SERIALIZERS': {
         'user': 'api.serializers.UserSerializer',
-        'user_list': 'api.serializers.UserSerializer',
-        'user_create': 'api.serializers.UserSignUpSerializer'},
+        'user_list': 'api.serializers.UserSerializer'},
     'LOGIN_FIELD': 'email',
     'PERMISSIONS': {
         'user': ['api.permissions.IsOwnerOrReadOnly'],
@@ -162,9 +153,6 @@ SHOPPING_CART_FILE = 'shopping-cart.pdf'
 CORS_URLS_REGEX = r'^/api/.*$'
 
 CORS_ALLOWED_ORIGINS = [
-    'http://127.0.0.1',
-    'http://{0}'.format(ALLOWED_HOSTS),
-    'http://{0}'.format(ALLOWED_HOSTS),
     'https://{0}'.format(ALLOWED_HOSTS),
     'https://{0}'.format(ALLOWED_HOSTS),
 ]

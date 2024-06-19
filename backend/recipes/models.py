@@ -3,7 +3,8 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from api.constants import RECIPE_MODELS_MAX_LENGTH, TAG_MAX_LEN
+from recipes.constants import (MIN_COOKING_TIME, RECIPE_MODELS_MAX_LENGTH,
+                               TAG_MAX_LEN)
 
 User = get_user_model()
 
@@ -30,7 +31,7 @@ class Tag(models.Model):
     class Meta:
         verbose_name = 'Тэг'
         verbose_name_plural = 'Тэги'
-        ordering = ['name']
+        ordering = ('name',)
 
     def __str__(self) -> str:
         return self.name
@@ -52,7 +53,12 @@ class Ingredient(models.Model):
         db_table = 'ingredient'
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
-        unique_together = ('name', 'measurement_unit')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['name', 'measurement_unit'],
+                name='unique_ingredient'
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.name
@@ -70,7 +76,7 @@ class Recipe(models.Model):
     )
     name = models.CharField(
         'Название рецепта',
-        max_length=200,
+        max_length=RECIPE_MODELS_MAX_LENGTH,
     )
     image = models.ImageField(
         'Картинка рецепта',
@@ -92,7 +98,7 @@ class Recipe(models.Model):
     )
     cooking_time = models.PositiveIntegerField(
         verbose_name='Время приготовления',
-        validators=[MinValueValidator(1)]
+        validators=[MinValueValidator(MIN_COOKING_TIME)]
     )
     pub_date = models.DateTimeField(
         'Дата публикации',
@@ -127,7 +133,8 @@ class RecipeIngredient(models.Model):
         'Количество',
         validators=[
             MinValueValidator(
-                1, 'Количество ингредиентов не может быть меньше 1'
+                MIN_COOKING_TIME,
+                'Количество ингредиентов не может быть меньше 1'
             )
         ]
     )
@@ -135,8 +142,15 @@ class RecipeIngredient(models.Model):
     class Meta:
         verbose_name = 'Ингредиент в рецепте'
         verbose_name_plural = 'Ингредиенты в рецепте'
-        unique_together = ('recipe', 'ingredient')
-        ordering = ['recipe', 'ingredient']
+        ordering = ('recipe', 'ingredient')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['recipe', 'ingredient'],
+                name='unique_recipe_ingredient'
+            ),
+        ]
+
+# Как будто после не больших правок тут сломалось избранное и карзина
 
 
 class BaseUserRecipeRelation(models.Model):
@@ -145,6 +159,7 @@ class BaseUserRecipeRelation(models.Model):
         User,
         on_delete=models.CASCADE,
         verbose_name='Пользователь'
+
     )
     recipe = models.ForeignKey(
         Recipe,
@@ -154,7 +169,13 @@ class BaseUserRecipeRelation(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ['user', 'recipe']
+        ordering = ('user', 'recipe')
+        default_related_name = '%(class)s_set'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'recipe'],
+                name='unique_user_recipe_relation')
+        ]
 
     def __str__(self) -> str:
         return f'{self.recipe} добавлен пользователем {self.user}.'
@@ -167,6 +188,7 @@ class Favorite(BaseUserRecipeRelation):
         db_table = 'favorite'
         verbose_name = 'Избранное'
         verbose_name_plural = 'Избранные'
+        default_related_name = 'favorite_relations'
 
     def __str__(self) -> str:
         return f'{self.recipe} добавлен в избранное пользователем {self.user}.'
@@ -179,9 +201,10 @@ class ShoppingCart(BaseUserRecipeRelation):
         db_table = 'shopping_cart'
         verbose_name = 'Список покупок'
         verbose_name_plural = 'Списки покупок'
+        default_related_name = 'shoppingcart_relations'
         constraints = [
             models.UniqueConstraint(
-                fields=['user', 'recipe'],
+                fields=('user', 'recipe'),
                 name='unique_shoppingcart_user_recipe')
         ]
 

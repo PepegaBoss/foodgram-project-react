@@ -10,16 +10,15 @@ from rest_framework.permissions import (AllowAny, IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
 
+from api.filters import IngredientFilter, RecipeFilter
+from api.permissions import IsOwnerOrReadOnly
+from api.serializers import (FavoriteCreateSerializer, FollowSerializer,
+                             IngredientSerializer, RecipeCreateSerializer,
+                             RecipeSerializer, ShoppingCartSerializer,
+                             TagSerializer, UserSerializer)
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Tag)
 from users.models import Follow
-
-from .filters import IngredientFilter, RecipeFilter
-from .permissions import IsOwnerOrReadOnly
-from .serializers import (FavoriteSerializer, FollowSerializer,
-                          IngredientSerializer, RecipeCreateSerializer,
-                          RecipeSerializer, ShoppingCartSerializer,
-                          TagSerializer, UserSerializer)
 
 User = get_user_model()
 
@@ -31,12 +30,14 @@ class UsersViewSet(DjoserUserViewSet):
 
     def get_permissions(self):
         if self.action == 'me':
-            permission_classes = [IsAuthenticated]
-        else:
-            permission_classes = [AllowAny]
-        return [permission() for permission in permission_classes]
+            permission_classes = [IsAuthenticated()]
+            return [permission() for permission in permission_classes]
+        return super().get_permissions()
 
 
+# я что-то сильно уже запутался со всем этим =D
+# Простите что так отправляю просто дедлайн уже завтра не знаю успею или нет
+# очень страшна
 class RecipeViewSet(viewsets.ModelViewSet):
     """Вьюсет для рецептов."""
 
@@ -66,11 +67,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    # Сделал так но че то сайт перестал работать, если удаляю из утилс
-    # urls пробовал менять не помогло
     @action(detail=False, methods=['get'],
             permission_classes=[IsAuthenticated])
-    def generate_shopping_cart_file(self, request):
+    def download_shopping_cart(self, request):
         shopping_cart = ShoppingCart.objects.filter(
             user=self.request.user).values('recipe')
         items = RecipeIngredient.objects.filter(
@@ -92,6 +91,55 @@ class RecipeViewSet(viewsets.ModelViewSet):
                                            'filename=shopping_cart.txt')
         response.writelines(text)
         return response
+
+    @action(detail=True, methods=['post'],
+            permission_classes=[IsAuthenticated])
+    def add_to_favorites(self, request, pk=None):
+        recipe = self.get_object()
+        data = {'user': request.user.id, 'recipe': recipe.id}
+        serializer = FavoriteCreateSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({'detail': 'Рецепт успешно добавлен в избранное'},
+                        status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['delete'],
+            permission_classes=[IsAuthenticated])
+    def remove_from_favorites(self, request, pk=None):
+        recipe = self.get_object()
+        favorite = Favorite.objects.filter(user=request.user, recipe=recipe)
+        if favorite.exists():
+            favorite.delete()
+            return Response({'detail': 'Рецепт успешно удален из избранного'},
+                            status=status.HTTP_204_NO_CONTENT)
+        return Response({'detail': 'Рецепт не найден в избранном'},
+                        status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['post'],
+            permission_classes=[IsAuthenticated])
+    def add_to_shopping_cart(self, request, pk=None):
+        recipe = self.get_object()
+        data = {'user': request.user.id, 'recipe': recipe.id}
+        serializer = ShoppingCartSerializer(
+            data=data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({'detail': 'Рецепт успешно добавлен в список покупок'},
+                        status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['delete'],
+            permission_classes=[IsAuthenticated])
+    def remove_from_shopping_cart(self, request, pk=None):
+        recipe = self.get_object()
+        shopping_cart_item = ShoppingCart.objects.filter(
+            user=request.user, recipe=recipe)
+        if shopping_cart_item.exists():
+            shopping_cart_item.delete()
+            return Response(
+                {'detail': 'Рецепт успешно удален из списка покупок'},
+                status=status.HTTP_204_NO_CONTENT)
+        return Response({'detail': 'Рецепт не найден в списке покупок'},
+                        status=status.HTTP_404_NOT_FOUND)
 
 
 class TagsViewSet(viewsets.ModelViewSet):
@@ -141,18 +189,6 @@ class ShoppingCartViewSet(BaseViewset):
     http_method_names = ['post', 'delete']
     model = ShoppingCart
     title_model = Recipe
-
-
-class FavoriteViewSet(BaseViewset):
-    """Вьюсет добавления в избранное."""
-
-    queryset = Favorite.objects.all()
-    serializer_class = FavoriteSerializer
-    model = Favorite
-    title_model = Recipe
-    permission_classes = (IsAuthenticated,)
-    http_method_names = ['post', 'delete']
-    lookup_field = 'id'
 
 
 class FollowViewSet(BaseViewset):
