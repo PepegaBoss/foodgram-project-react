@@ -11,7 +11,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         model = Ingredient
         with open(
-            f'{settings.BASE_DIR}/static/data/ingredients.csv',
+            f'{settings.BASE_DIR}/data/ingredients.csv',
             newline='',
             encoding='utf-8'
         ) as csv_file:
