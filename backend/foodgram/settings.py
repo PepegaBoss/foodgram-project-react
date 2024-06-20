@@ -21,8 +21,7 @@ ALLOWED_HOSTS = os.getenv('HOSTS', '127.0.0.1,localhost').split(',')
 CSRF_TRUSTED_ORIGINS = [
     'http://backend',
     'http://{0}'.format(ALLOWED_HOSTS),
-    'https://{0}'.format(ALLOWED_HOSTS)
-    ]
+    'https://{0}'.format(ALLOWED_HOSTS)]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
