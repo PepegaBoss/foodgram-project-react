@@ -12,10 +12,11 @@ from rest_framework.response import Response
 
 from api.filters import IngredientFilter, RecipeFilter
 from api.permissions import IsOwnerOrReadOnly
-from api.serializers import (FavoriteCreateSerializer, FollowSerializer,
+from api.serializers import (FavoriteCreateSerializer, FollowReadSerializer,
                              IngredientSerializer, RecipeCreateSerializer,
                              RecipeSerializer, ShoppingCartSerializer,
-                             TagSerializer, UserSerializer)
+                             TagSerializer, UserSerializer,
+                             FollowCreateSerializer)
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Tag)
 from users.models import Follow
@@ -30,14 +31,11 @@ class UsersViewSet(DjoserUserViewSet):
 
     def get_permissions(self):
         if self.action == 'me':
-            permission_classes = [IsAuthenticated()]
-            return [permission() for permission in permission_classes]
+            return [IsAuthenticated()]
         return super().get_permissions()
 
 
-# я что-то сильно уже запутался со всем этим =D
-# Простите что так отправляю просто дедлайн уже завтра не знаю успею или нет
-# очень страшна
+# Попросил до 22 числа, времени.
 class RecipeViewSet(viewsets.ModelViewSet):
     """Вьюсет для рецептов."""
 
@@ -49,23 +47,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filterset_class = RecipeFilter
 
     def get_serializer_class(self):
-        if self.request.user.is_anonymous:
-            return RecipeSerializer
         if self.action in ('create', 'update', 'partial_update'):
             return RecipeCreateSerializer
-        return super().get_serializer_class()
-
-    def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
-
-    def _delete_object(self, request, model, object_id):
-        obj = get_object_or_404(model, pk=object_id)
-        if not self.request.user == obj.user:
-            return Response(
-                "У вас нет прав для выполнения этого действия.",
-                status=status.HTTP_403_FORBIDDEN)
-        obj.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return RecipeSerializer
 
     @action(detail=False, methods=['get'],
             permission_classes=[IsAuthenticated])
@@ -92,43 +76,42 @@ class RecipeViewSet(viewsets.ModelViewSet):
         response.writelines(text)
         return response
 
+    def add_to_collection(self, request, pk=None,
+                          serializer_class=None, model=None):
+        instance = self.get_object()
+        data = {'user': request.user.id, 'recipe': instance.id}
+        serializer = serializer_class(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(status=status.HTTP_201_CREATED)
+
     @action(detail=True, methods=['post'],
             permission_classes=[IsAuthenticated])
     def add_to_favorites(self, request, pk=None):
-        recipe = self.get_object()
-        data = {'user': request.user.id, 'recipe': recipe.id}
-        serializer = FavoriteCreateSerializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({'detail': 'Рецепт успешно добавлен в избранное'},
-                        status=status.HTTP_201_CREATED)
+        return self.add_to_collection(
+            request, pk=pk, serializer_class=FavoriteCreateSerializer,
+            model=Favorite)
 
-    @action(detail=True, methods=['delete'],
-            permission_classes=[IsAuthenticated])
+    @add_to_favorites.mapping.delete
     def remove_from_favorites(self, request, pk=None):
-        recipe = self.get_object()
-        favorite = Favorite.objects.filter(user=request.user, recipe=recipe)
-        if favorite.exists():
-            favorite.delete()
-            return Response({'detail': 'Рецепт успешно удален из избранного'},
-                            status=status.HTTP_204_NO_CONTENT)
-        return Response({'detail': 'Рецепт не найден в избранном'},
-                        status=status.HTTP_404_NOT_FOUND)
+        instance = self.get_object()
+        count, _ = Favorite.objects.filter(
+            user=request.user, recipe=instance).delete()
+        if count == 1:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response(
+                {'detail': 'Рецепт не найден в избранном'},
+                status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=True, methods=['post'],
             permission_classes=[IsAuthenticated])
     def add_to_shopping_cart(self, request, pk=None):
-        recipe = self.get_object()
-        data = {'user': request.user.id, 'recipe': recipe.id}
-        serializer = ShoppingCartSerializer(
-            data=data, context={'request': request})
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({'detail': 'Рецепт успешно добавлен в список покупок'},
-                        status=status.HTTP_201_CREATED)
+        return self.add_to_collection(
+            request, pk=pk, serializer_class=ShoppingCartSerializer,
+            model=ShoppingCart)
 
-    @action(detail=True, methods=['delete'],
-            permission_classes=[IsAuthenticated])
+    @add_to_shopping_cart.mapping.delete
     def remove_from_shopping_cart(self, request, pk=None):
         recipe = self.get_object()
         shopping_cart_item = ShoppingCart.objects.filter(
@@ -180,21 +163,21 @@ class BaseViewset(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class ShoppingCartViewSet(BaseViewset):
-    """Вьюсет списка покупок."""
+# class ShoppingCartViewSet(BaseViewset):
+#     """Вьюсет списка покупок."""
 
-    queryset = ShoppingCart.objects.all()
-    serializer_class = ShoppingCartSerializer
-    permission_classes = (IsAuthenticated,)
-    http_method_names = ['post', 'delete']
-    model = ShoppingCart
-    title_model = Recipe
+#     queryset = ShoppingCart.objects.all()
+#     serializer_class = ShoppingCartSerializer
+#     permission_classes = (IsAuthenticated,)
+#     http_method_names = ['post', 'delete']
+#     model = ShoppingCart
+#     title_model = Recipe
 
 
 class FollowViewSet(BaseViewset):
     """Вьюсет добавления в подписки."""
 
-    serializer_class = FollowSerializer
+    serializer_class = FollowCreateSerializer
     permission_classes = (IsAuthenticated,)
     http_method_names = ['post', 'delete']
     model = Follow
@@ -233,7 +216,7 @@ class FollowListViewSet(mixins.ListModelMixin,
                         viewsets.GenericViewSet):
     """Вьюсет списка подписок."""
 
-    serializer_class = FollowSerializer
+    serializer_class = FollowReadSerializer
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):

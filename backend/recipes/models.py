@@ -4,7 +4,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 from recipes.constants import (MIN_COOKING_TIME, RECIPE_MODELS_MAX_LENGTH,
-                               TAG_MAX_LEN)
+                               TAG_MAX_LEN, MIN_AMOUNT_INGREDIENTS)
 
 User = get_user_model()
 
@@ -72,7 +72,6 @@ class Recipe(models.Model):
         on_delete=models.CASCADE,
         verbose_name='Автор',
         related_name='recipe',
-        null=True
     )
     name = models.CharField(
         'Название рецепта',
@@ -133,7 +132,7 @@ class RecipeIngredient(models.Model):
         'Количество',
         validators=[
             MinValueValidator(
-                MIN_COOKING_TIME,
+                MIN_AMOUNT_INGREDIENTS,
                 'Количество ингредиентов не может быть меньше 1'
             )
         ]
@@ -149,8 +148,6 @@ class RecipeIngredient(models.Model):
                 name='unique_recipe_ingredient'
             ),
         ]
-
-# Как будто после не больших правок тут сломалось избранное и карзина
 
 
 class BaseUserRecipeRelation(models.Model):
@@ -170,15 +167,6 @@ class BaseUserRecipeRelation(models.Model):
     class Meta:
         abstract = True
         ordering = ('user', 'recipe')
-        default_related_name = '%(class)s_set'
-        constraints = [
-            models.UniqueConstraint(
-                fields=['user', 'recipe'],
-                name='unique_user_recipe_relation')
-        ]
-
-    def __str__(self) -> str:
-        return f'{self.recipe} добавлен пользователем {self.user}.'
 
 
 class Favorite(BaseUserRecipeRelation):
@@ -189,6 +177,11 @@ class Favorite(BaseUserRecipeRelation):
         verbose_name = 'Избранное'
         verbose_name_plural = 'Избранные'
         default_related_name = 'favorite_relations'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'recipe'],
+                name='unique_user_recipe_relation')
+        ]
 
     def __str__(self) -> str:
         return f'{self.recipe} добавлен в избранное пользователем {self.user}.'

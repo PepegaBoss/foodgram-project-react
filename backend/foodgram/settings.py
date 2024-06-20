@@ -10,22 +10,19 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-HOSTS = os.getenv('HOSTS').split(',')
-
 
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', get_random_secret_key())
 
 DEBUG = os.getenv('DEBUG', "False") == "True"
 
-ALLOWED_HOSTS = list(filter(None, HOSTS))
+ALLOWED_HOSTS = os.getenv('HOSTS', '127.0.0.1,localhost').split(',')
 
 
 CSRF_TRUSTED_ORIGINS = [
     'http://backend',
     'http://{0}'.format(ALLOWED_HOSTS),
     'https://{0}'.format(ALLOWED_HOSTS),
-]
-
+    ]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -153,6 +150,8 @@ SHOPPING_CART_FILE = 'shopping-cart.pdf'
 CORS_URLS_REGEX = r'^/api/.*$'
 
 CORS_ALLOWED_ORIGINS = [
-    'https://{0}'.format(ALLOWED_HOSTS),
+    'http://{0}'.format(ALLOWED_HOSTS),
     'https://{0}'.format(ALLOWED_HOSTS),
 ]
+
+PAGE_SIZE = 10

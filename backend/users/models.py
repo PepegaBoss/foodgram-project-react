@@ -4,8 +4,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import F, Q
 
-from recipes.constants import (EMAIL_MAX_LENGTH, PASSWORD_MAX_LENGTH,
-                               USERNAME_MAX_LENGTH)
+from users.constants import (EMAIL_MAX_LENGTH, PASSWORD_MAX_LENGTH,
+                             USERNAME_MAX_LENGTH)
 
 
 class User(AbstractUser):
@@ -16,6 +16,7 @@ class User(AbstractUser):
         'username',
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
+        validators=[username_validator],
     )
     first_name = models.CharField(
         'Имя',
