@@ -35,7 +35,6 @@ class UsersViewSet(DjoserUserViewSet):
         return super().get_permissions()
 
 
-# Попросил до 22 числа, времени.
 class RecipeViewSet(viewsets.ModelViewSet):
     """Вьюсет для рецептов."""
 
@@ -77,52 +76,46 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return response
 
     def add_to_collection(self, request, pk=None,
-                          serializer_class=None, model=None):
+                          serializer_class=None):
         instance = self.get_object()
         data = {'user': request.user.id, 'recipe': instance.id}
         serializer = serializer_class(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(status=status.HTTP_201_CREATED)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=['post'],
-            permission_classes=[IsAuthenticated])
-    def add_to_favorites(self, request, pk=None):
-        return self.add_to_collection(
-            request, pk=pk, serializer_class=FavoriteCreateSerializer,
-            model=Favorite)
-
-    @add_to_favorites.mapping.delete
-    def remove_from_favorites(self, request, pk=None):
+    def remove_from_collection(self, request, pk=None, model=None):
         instance = self.get_object()
-        count, _ = Favorite.objects.filter(
+        model = None
+        count, _ = model.objects.filter(
             user=request.user, recipe=instance).delete()
-        if count == 1:
+        if count:
             return Response(status=status.HTTP_204_NO_CONTENT)
-        else:
-            return Response(
-                {'detail': 'Рецепт не найден в избранном'},
-                status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {'detail': 'Рецепт не найден'},
+            status=status.HTTP_404_NOT_FOUND
+        )
 
     @action(detail=True, methods=['post'],
             permission_classes=[IsAuthenticated])
-    def add_to_shopping_cart(self, request, pk=None):
+    def favorite(self, request, pk=None):
+        return self.add_to_collection(
+            request, pk=pk, serializer_class=FavoriteCreateSerializer)
+
+    @favorite.mapping.delete
+    def remove_from_favorites(self, request, pk=None):
+        return self.remove_from_collection(request, pk=pk, model=Favorite)
+
+    @action(detail=True, methods=['post'],
+            permission_classes=[IsAuthenticated])
+    def shopping_cart(self, request, pk=None):
         return self.add_to_collection(
             request, pk=pk, serializer_class=ShoppingCartSerializer,
             model=ShoppingCart)
 
-    @add_to_shopping_cart.mapping.delete
+    @shopping_cart.mapping.delete
     def remove_from_shopping_cart(self, request, pk=None):
-        recipe = self.get_object()
-        shopping_cart_item = ShoppingCart.objects.filter(
-            user=request.user, recipe=recipe)
-        if shopping_cart_item.exists():
-            shopping_cart_item.delete()
-            return Response(
-                {'detail': 'Рецепт успешно удален из списка покупок'},
-                status=status.HTTP_204_NO_CONTENT)
-        return Response({'detail': 'Рецепт не найден в списке покупок'},
-                        status=status.HTTP_404_NOT_FOUND)
+        return self.remove_from_collection(request, pk=pk, model=ShoppingCart)
 
 
 class TagsViewSet(viewsets.ModelViewSet):
@@ -161,17 +154,6 @@ class BaseViewset(viewsets.ModelViewSet):
             self.model, recipe=recipe, user=self.request.user)
         model_item.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-# class ShoppingCartViewSet(BaseViewset):
-#     """Вьюсет списка покупок."""
-
-#     queryset = ShoppingCart.objects.all()
-#     serializer_class = ShoppingCartSerializer
-#     permission_classes = (IsAuthenticated,)
-#     http_method_names = ['post', 'delete']
-#     model = ShoppingCart
-#     title_model = Recipe
 
 
 class FollowViewSet(BaseViewset):

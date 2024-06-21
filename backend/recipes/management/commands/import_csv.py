@@ -6,10 +6,12 @@ from recipes.models import Ingredient
 
 
 class Command(BaseCommand):
-    """ Скрипт импорта из файла .csv """
+    """Скрипт импорта из файла .csv"""
 
     def handle(self, *args, **kwargs):
         model = Ingredient
+        ingredients = []
+
         with open(
             f'{settings.BASE_DIR}/data/ingredients.csv',
             newline='',
@@ -17,11 +19,14 @@ class Command(BaseCommand):
         ) as csv_file:
             reader = csv.reader(csv_file)
             count = 0
+
             for row in reader:
                 name, unit = row
-                model.objects.get_or_create(name=name,
-                                            measurement_unit=unit)
+                ingredients.append(model(name=name, measurement_unit=unit))
                 count += 1
-                print(f'Обработано: {count} записей.')
+
+            model.objects.bulk_create(ingredients)
+
+            print(f'Обработано: {count} записей.')
 
         self.stdout.write(self.style.SUCCESS('Данные загружены'))

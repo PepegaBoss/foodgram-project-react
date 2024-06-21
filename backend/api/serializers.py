@@ -113,10 +113,13 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     image = Base64ImageField(required=True, allow_null=False)
 
     class Meta:
-        fields = ('id', 'tags', 'author', 'ingredients',
+        fields = ('id', 'tags', 'ingredients',
                   'name', 'image', 'text',
                   'cooking_time')
         model = Recipe
+
+    unique_ingredients = set()
+    unique_tags = set()
 
     def validate_ingredients(self, ingredients):
         if not ingredients:
@@ -125,22 +128,32 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return ingredients
 
     def validate_tags(self, tags):
-        unique = set()
-        for tag in tags:
-            if tag.id in unique:
-                raise serializers.ValidationError('tag не могут повторяться')
-            unique.add(tag.id)
+        if not tags:
+            raise serializers.ValidationError('Теги не могут отсутствовать.')
+
+        tag_ids = {tag.id for tag in tags}
+        if len(tag_ids) != len(tags):
+            raise serializers.ValidationError('Теги не могут повторяться.')
         return tags
 
     def validate(self, attrs):
-        if 'tags' not in attrs:
-            raise serializers.ValidationError(
-                'Теги не могут отсутствовать')
+        validated_data = super().validate(attrs)
 
-        if 'recipeingredient' not in attrs:
+        ingredients = validated_data.get('ingredients', [])
+        for ingredient_data in ingredients:
+            ingredient_id = ingredient_data.get('id')
+            if ingredient_id in self.unique_ingredients:
+                raise serializers.ValidationError(
+                    'Ингредиенты не могут повторяться.')
+            self.unique_ingredients.add(ingredient_id)
+
+        tags = validated_data.get('tags', [])
+        tag_ids = {tag.id for tag in tags}
+        if len(tag_ids) != len(tags):
             raise serializers.ValidationError(
-                'Ингредиенты не могут отсутствовать')
-        return attrs
+                'Теги не могут повторяться.')
+
+        return validated_data
 
     @staticmethod
     def create_ingredient(items, instance):
@@ -167,7 +180,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def update(self, instance, validated_data):
         items = validated_data.pop('recipeingredient')
-        instance.recipeingredient_set.clear()
+        instance.ingredients.clear()
         self.create_ingredient(items, instance)
         return super().update(instance, validated_data)
 
@@ -279,8 +292,7 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ShoppingCart
-        fields = ('user', 'recipe', 'id')
-        read_only_fields = ('id',)
+        fields = ('user', 'recipe')
         validators = [
             UniqueTogetherValidator(
                 queryset=ShoppingCart.objects.all(),

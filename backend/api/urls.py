@@ -15,17 +15,9 @@ router.register('recipes',
                 RecipeViewSet,
                 basename='recipes')
 
-router.register(r'recipes/(?P<title_id>\d+)/favorite',
-                RecipeViewSet,
-                basename='favorite-detail')
-
 router.register(r'users/(?P<title_id>\d+)/subscribe',
                 FollowViewSet,
                 basename='follow-detail')
-
-router.register(r'recipes/(?P<title_id>\d+)/shopping_cart',
-                RecipeViewSet,
-                basename='shopping_cart')
 
 router.register('users/subscriptions',
                 FollowListViewSet,
