@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
+from rest_framework.exceptions import ValidationError
 
 from api.fields import Base64ImageField
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
@@ -118,9 +119,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                   'cooking_time')
         model = Recipe
 
-    unique_ingredients = set()
-    unique_tags = set()
-
     def validate_ingredients(self, ingredients):
         if not ingredients:
             raise serializers.ValidationError(
@@ -136,24 +134,31 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Теги не могут повторяться.')
         return tags
 
-    def validate(self, attrs):
-        validated_data = super().validate(attrs)
+    def validate(self, data):
+        request = self.context['request']
+        if (request.method == 'POST'
+           and Recipe.objects.filter(
+               name=data['name'], text=data['text']).exists()):
+            raise ValidationError('Такой рецепт уже существует')
 
-        ingredients = validated_data.get('ingredients', [])
-        for ingredient_data in ingredients:
-            ingredient_id = ingredient_data.get('id')
-            if ingredient_id in self.unique_ingredients:
+        validated_tags = set()
+        for tag in data['tags']:
+            if tag.id in validated_tags:
                 raise serializers.ValidationError(
-                    'Ингредиенты не могут повторяться.')
-            self.unique_ingredients.add(ingredient_id)
+                    'Тег можно указать только 1 раз')
+            else:
+                validated_tags.add(tag.id)
 
-        tags = validated_data.get('tags', [])
-        tag_ids = {tag.id for tag in tags}
-        if len(tag_ids) != len(tags):
-            raise serializers.ValidationError(
-                'Теги не могут повторяться.')
+        validated_ingredients = set()
+        for ingredient_amount in data['recipeingredient']:
+            ingredient_id = ingredient_amount['ingredient']['id']
+            if ingredient_id in validated_ingredients:
+                raise serializers.ValidationError(
+                    'Ингредиент можно указать только 1 раз')
+            else:
+                validated_ingredients.add(ingredient_id)
 
-        return validated_data
+        return data
 
     @staticmethod
     def create_ingredient(items, instance):
