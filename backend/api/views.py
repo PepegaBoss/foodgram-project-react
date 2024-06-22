@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Sum
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet as DjoserUserViewSet
@@ -170,14 +170,14 @@ class FollowViewSet(BaseViewset):
     permission_classes = (IsAuthenticated,)
     http_method_names = ['post', 'delete']
     model = Follow
-    title_model = User
+    user_model = User
 
     def perform_create(self, serializer):
-        author = self._get_title(self.title_model)
+        author = self._get_user()
         serializer.save(author=author)
 
     def create(self, request, *args, **kwargs):
-        author = self._get_title(self.title_model)
+        author = self._get_user()
         data = {'author': author.id}
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -192,7 +192,7 @@ class FollowViewSet(BaseViewset):
     @action(methods=['delete'], detail=True,
             permission_classes=[IsAuthenticated])
     def delete(self, request, *args, **kwargs):
-        author = self._get_title(self.title_model)
+        author = self._get_user()
         model_items = self.model.objects.filter(
             author=author, follower=self.request.user)
         if model_items.exists():
@@ -200,6 +200,13 @@ class FollowViewSet(BaseViewset):
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(
             'Объект не существует.', status=status.HTTP_400_BAD_REQUEST)
+
+    def _get_user(self):
+        user_id = self.kwargs.get('user_id')
+        try:
+            return self.user_model.objects.get(pk=user_id)
+        except self.user_model.DoesNotExist:
+            raise Http404('Пользователь не найден')
 
 
 class IngredientViewSet(viewsets.ModelViewSet):

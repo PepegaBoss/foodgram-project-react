@@ -14,13 +14,9 @@ router.register('recipes',
                 RecipeViewSet,
                 basename='recipes')
 
-router.register(r'users/(?P<title_id>\d+)/subscribe',
+router.register(r'users/(?P<user_id>\d+)/subscribe',
                 FollowViewSet,
                 basename='follow-detail')
-
-router.register('users/subscriptions',
-                UsersViewSet,
-                basename='follow-list')
 
 router.register('ingredients',
                 IngredientViewSet,
