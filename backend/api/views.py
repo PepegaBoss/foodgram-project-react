@@ -4,7 +4,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet as DjoserUserViewSet
-from rest_framework import mixins, status, viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import (AllowAny, IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
@@ -33,6 +33,15 @@ class UsersViewSet(DjoserUserViewSet):
         if self.action == 'me':
             return [IsAuthenticated()]
         return super().get_permissions()
+
+    @action(detail=False, methods=['get'], url_path='subscriptions')
+    def subscriptions(self, request, *args, **kwargs):
+        queryset = Follow.objects.filter(
+            follower=self.request.user).prefetch_related('author__recipe')
+        paginated_queryset = self.paginate_queryset(queryset)
+        serializer = FollowReadSerializer(
+            paginated_queryset, many=True, context={'request': request})
+        return self.get_paginated_response(serializer.data)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -191,20 +200,6 @@ class FollowViewSet(BaseViewset):
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(
             'Объект не существует.', status=status.HTTP_400_BAD_REQUEST)
-
-
-# Подписка теперь работает, а вот список нет, не получается отладить
-class FollowListViewSet(mixins.ListModelMixin,
-                        viewsets.GenericViewSet):
-    """Вьюсет списка подписок."""
-
-    serializer_class = FollowReadSerializer
-    permission_classes = (IsAuthenticated,)
-
-    def get_queryset(self):
-        return (
-            Follow.objects.filter(
-                follower=self.request.user).prefetch_related('author__recipe'))
 
 
 class IngredientViewSet(viewsets.ModelViewSet):

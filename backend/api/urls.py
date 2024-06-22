@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import (FollowListViewSet, FollowViewSet,
+from .views import (FollowViewSet,
                     IngredientViewSet, RecipeViewSet,
                     TagsViewSet, UsersViewSet)
 
@@ -20,7 +20,7 @@ router.register(r'users/(?P<title_id>\d+)/subscribe',
                 basename='follow-detail')
 
 router.register('users/subscriptions',
-                FollowListViewSet,
+                UsersViewSet,
                 basename='follow-list')
 
 router.register('ingredients',
