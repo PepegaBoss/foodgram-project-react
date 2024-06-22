@@ -20,6 +20,9 @@ ALLOWED_HOSTS = os.getenv('HOSTS', '127.0.0.1,localhost,backend').split(',')
 
 CSRF_TRUSTED_ORIGINS = [
     'http://backend',
+    'https://backend',
+    'http://127.0.0.1',
+    'http://localhost',
     'http://{0}'.format(ALLOWED_HOSTS),
     'https://{0}'.format(ALLOWED_HOSTS)
 ]
