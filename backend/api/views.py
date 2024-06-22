@@ -12,11 +12,11 @@ from rest_framework.response import Response
 
 from api.filters import IngredientFilter, RecipeFilter
 from api.permissions import IsOwnerOrReadOnly
-from api.serializers import (FavoriteCreateSerializer, FollowReadSerializer,
-                             IngredientSerializer, RecipeCreateSerializer,
-                             RecipeSerializer, ShoppingCartSerializer,
-                             TagSerializer, UserSerializer,
-                             FollowCreateSerializer)
+from api.serializers import (FavoriteCreateSerializer, FollowCreateSerializer,
+                             FollowReadSerializer, IngredientSerializer,
+                             RecipeCreateSerializer, RecipeSerializer,
+                             ShoppingCartSerializer, TagSerializer,
+                             UserSerializer)
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Tag)
 from users.models import Follow
