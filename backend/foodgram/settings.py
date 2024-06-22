@@ -17,15 +17,14 @@ DEBUG = os.getenv('DEBUG', "False") == "True"
 
 ALLOWED_HOSTS = os.getenv('HOSTS', '127.0.0.1,localhost,backend').split(',')
 
+CSRF_TRUSTED_ORIGINS = []
 
-CSRF_TRUSTED_ORIGINS = [
-    'http://backend',
-    'https://backend',
-    'http://127.0.0.1',
-    'http://localhost',
-    'http://{0}'.format(ALLOWED_HOSTS),
-    'https://{0}'.format(ALLOWED_HOSTS)
-]
+for host in ALLOWED_HOSTS:
+    host = host.strip()
+    if host:
+        CSRF_TRUSTED_ORIGINS.append(f'http://{host}')
+        CSRF_TRUSTED_ORIGINS.append(f'https://{host}')
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
