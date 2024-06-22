@@ -86,7 +86,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def remove_from_collection(self, request, pk=None, model=None):
         instance = self.get_object()
-        model = None
         count, _ = model.objects.filter(
             user=request.user, recipe=instance).delete()
         if count:
@@ -110,8 +109,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             permission_classes=[IsAuthenticated])
     def shopping_cart(self, request, pk=None):
         return self.add_to_collection(
-            request, pk=pk, serializer_class=ShoppingCartSerializer,
-            model=ShoppingCart)
+            request, pk=pk, serializer_class=ShoppingCartSerializer)
 
     @shopping_cart.mapping.delete
     def remove_from_shopping_cart(self, request, pk=None):
@@ -167,33 +165,35 @@ class FollowViewSet(BaseViewset):
 
     def perform_create(self, serializer):
         author = self._get_title(self.title_model)
-        serializer.save(follower=self.request.user,
-                        author=author,)
+        serializer.save(author=author)
 
     def create(self, request, *args, **kwargs):
         author = self._get_title(self.title_model)
-        data = {'author': author}
+        data = {'author': author.id}
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
+        read_serializer = FollowReadSerializer(
+            serializer.instance, context={'request': request})
+        headers = self.get_success_headers(read_serializer.data)
         return Response(
-            serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            read_serializer.data, status=status.HTTP_201_CREATED,
+            headers=headers)
 
-    @action(methods=['delete'],
-            detail=True,
+    @action(methods=['delete'], detail=True,
             permission_classes=[IsAuthenticated])
     def delete(self, request, *args, **kwargs):
         author = self._get_title(self.title_model)
-        model_items = self.model.objects.filter(author=author,
-                                                follower=self.request.user)
+        model_items = self.model.objects.filter(
+            author=author, follower=self.request.user)
         if model_items.exists():
             model_items.first().delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response('Объект не существует.',
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            'Объект не существует.', status=status.HTTP_400_BAD_REQUEST)
 
 
+# Подписка теперь работает, а вот список нет, не получается отладить
 class FollowListViewSet(mixins.ListModelMixin,
                         viewsets.GenericViewSet):
     """Вьюсет списка подписок."""
